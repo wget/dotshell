@@ -319,7 +319,7 @@ extract() {
         e=1
 
         if [[ ! -r $i ]]; then
-            echo "[${RED}+${OFF}] $0: file is unreadable: \`$i'" >&2
+            echo "[${RED}+${OFF}] $0: file is unreadable: '$i'" >&2
             continue
         fi
 
