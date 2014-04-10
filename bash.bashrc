@@ -110,15 +110,26 @@ fi
 
 # By default console commands' history is saved only when you type 'exit' in
 # your GUI console. When you close your console with 'x' in the corner, it does
-# not happen. Use the following line to enable autosaving after every command
-# execution.
-[[ "${PROMPT_COMMAND}" ]] && PROMPT_COMMAND="$PROMPT_COMMAND;history -a" || PROMPT_COMMAND="history -a"
+# not happen.
+# Use the following line to enable autosaving after every command execution and
+# make the history accessible from every terminal tabs or windows (e.g.: if ls
+# is executed in one, switch to another already-running terminal and then press
+# up, ls shows up).
+#
+# -a: append history lines from this session to the history file;
+# -c: clear the history list by deleting all of the entries;
+# -r: read the history file and append the contents to the history list
+#
+# - No need to check if the history command is present, it's built-in bash.
+# - Need to issue at least a command to get the history updated in an
+# already-open terminal.
+export PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
 
-# Avoid duplicate lines in history.
+# Line matching the previous line history won't be saved.
+# NOTE: HISTCONTROL is a colon separated list.
 # HISTCONTROL=ignoredups
 
-# Lines which begin with a space character are not saved in the history list.
-# Note: HISTCONTROL is a colon separated list.
+# Lines which begin with a space character are not saved in the history.
 # HISTCONTROL+=:ignorespace
 
 # ignoreboth is a shortcut for ignoredups and ignorespace described just above.
