@@ -334,7 +334,6 @@ ssh-agentManagement
 #-------------------------------------------------------------------------------
 # (has to be sourced with source or . from another file)
 if [ -r bash_specific.bashrc ]; then
-    . bash_specific.bashrc
+    . ./bash_specific.bashrc
 fi
 #}}}
-
