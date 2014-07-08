@@ -214,7 +214,7 @@ if ls -alh >/dev/null 2>&1; then
 fi
 
 # For security reasons, redefine the default behaviour
-if [[ "$(uname)" == "Darwin" ]] || [[ "$(uname)" == "Linux" ]]; then
+if [[ "$(uname)" == "Linux" ]]; then
     alias rm='rm --preserve-root'
 fi
 
