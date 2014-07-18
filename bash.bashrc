@@ -234,6 +234,14 @@ export LESS_TERMCAP_ZO=$(tput ssupm)
 export LESS_TERMCAP_ZW=$(tput rsupm)
 
 LESS="--RAW-CONTROL-CHARS"
+
+# Add the fatest way to get our public ip address
+alias myip='
+if type dig >/dev/null 2>&1; then
+    dig +short myip.opendns.com @resolver1.opendns.com
+else
+  echo "[${RED}-${OFF}] dig was not found! This command is usually found in the 'dnsutils' package of common GNU/Linux distributions."
+fi'
 #}}}
 
 #{{{ SSH-agent management
