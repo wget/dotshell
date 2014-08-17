@@ -340,8 +340,30 @@ ssh-agentManagement
 
 #{{{ Platform specific
 #-------------------------------------------------------------------------------
-# (has to be sourced with source or . from another file)
-if [ -r bash_specific.bashrc ]; then
-    . ./bash_specific.bashrc
+# Source platform specific code from another file
+#
+# NOTE: The location "./bash_specific.bashrc" cannot be used since this will
+# only check the current directory the user sourcing this script is in (default
+# is /home when booting the machine). This is not what we want. Get inspiration
+# from
+# http://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
+function getScriptDirectory() {
+    local source="${BASH_SOURCE[0]}"
+    local dir=''
+    # Resolve $source until the file is no longer a symlink
+    while [ -h "$source" ]; do
+        dir="$(cd -P "${source%/*}" && echo ${PWD})"
+        source="$(readlink "$source")"
+        # If $source was a relative symlink, we need to resolve it relative to the path where the symlink file was located
+        [[ $source != /* ]] && source="$dir/$source"
+    done
+    dir="$(cd -P "${source%/*}" && echo ${PWD})"
+    scriptDirectory="$dir"
+}
+getScriptDirectory
+if [ -r "${scriptDirectory}/bash_specific.bashrc" ]; then
+    . ${scriptDirectory}/bash_specific.bashrc
 fi
+unset scriptDirectory
+
 #}}}
