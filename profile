@@ -1,6 +1,33 @@
 # /etc/profile: system-wide .profile file for the Bourne shell (sh(1))
 # and Bourne compatible shells (bash(1), ksh(1), ash(1), ...).
 
+#{{{ Terminal colors
+#-------------------------------------------------------------------------------
+BLUE="[34;01m"
+CYAN="[36;01m"
+CYANN="[36m"
+GREEN="[32;01m"
+RED="[31;01m"
+ORANGE="[33;01m"
+PURP="[35;01m"
+OFF="[0m"
+#}}}
+
+#{{{ File permissions
+#-------------------------------------------------------------------------------
+# On UNIX, a umask is used to determine the file permission for newly created
+# files. The default permissions are 777 for the directories and 666 for the
+# files. The umask applies a NOT AND mask on these default values. By default,
+# - regular users have a 0002 umask which means
+#   775 (rwxrwxr-x) for directories
+#   664 (rw-rw-r--) for files.
+# - root user has a 0022 umask which means
+#   755 (rwxr-xr-x) for directories
+#   644 (rw-r--r--) for files.
+# This mask will define for all regular and root users permissions as
+# 700 for directories and 600 for files.
+umask 077
+
 # The default umask is now handled by pam_umask.
 # See pam_umask(8) and /etc/login.defs.
 umask 077

@@ -1,16 +1,5 @@
 # System-wide .bashrc file for interactive bash(2) shells.
 
-#{{{ Terminal colors
-#-------------------------------------------------------------------------------
-BLUE="[34;01m"
-CYAN="[36;01m"
-CYANN="[36m"
-GREEN="[32;01m"
-RED="[31;01m"
-PURP="[35;01m"
-OFF="[0m"
-#}}}
-
 #{{{ General settings
 #-------------------------------------------------------------------------------
 # If not running interactively don't do anything and quit config.
@@ -75,22 +64,6 @@ if [ -x /usr/bin/command-not-found ] || [ -x /usr/share/command-not-found ]; the
         fi
     }
 fi
-#}}}
-
-#{{{ File permissions
-#-------------------------------------------------------------------------------
-# On UNIX, a umask is used to determine the file permission for newly created
-# files. The default permissions are 777 for the directories and 666 for the
-# files. The umask applies a NOT AND mask on these default values.
-#
-# By default, the regular users have a 0002 umask, the permissions are 775
-# (rwxrwxr-x) for the directories and 664 (rw-rw-r--) for the files.
-#
-# By default, the root user has a 0022 umask, the default permissions are 755
-# (rwxr-xr-x) for the directories and 644 (rw-r--r--) for the files.
-umask 077
-# This mask will define for all kind of users (regular and root) permissions as
-# 700 for directories and 600 for files. 
 #}}}
 
 #{{{ Historic management
