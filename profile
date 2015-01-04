@@ -28,9 +28,6 @@ OFF="[0m"
 # 700 for directories and 600 for files.
 umask 077
 
-# The default umask is now handled by pam_umask.
-# See pam_umask(8) and /etc/login.defs.
-umask 077
 #}}}
 
 # Load other script profiles from /etc/profile.d
