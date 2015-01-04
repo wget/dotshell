@@ -41,7 +41,7 @@ if [ -d "/etc/profile.d" ]; then
 fi
 
 # Set our default path
-export PATH="/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/local/bin:."
+export PATH="/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/local/bin"
 
 # Change the default editor to vim if it exists.
 if type vim >/dev/null 2>&1; then
