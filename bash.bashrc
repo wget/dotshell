@@ -159,6 +159,37 @@ PS4='+ '
 
 #{{{ Aliases
 #-------------------------------------------------------------------------------
+# Function used below checking if external tools are available. Can be used
+# from the shell directly since this is a function.
+function checkDep() {
+    local deps=($1)
+    local notFound=()
+
+    for i in "${deps[@]}"; do
+        if ! type $i >/dev/null 2>&1; then
+            notFound+=($i)
+        fi
+    done
+
+    if [ ${#notFound[@]} -eq 0 ]; then
+        return 0
+    fi
+
+    if [ ${#notFound[@]} -eq 1 ]; then
+        echo "[${RED}-${OFF}] \"$i\" was found! Aborted."
+        return 1
+    fi
+
+    if [ ${#notFound[@]} -gt 1 ]; then
+        echo -n "[${RED}-${OFF}] "
+        for i in "${notFound[@]}"; do
+            echo -n "\"$i\" "
+        done
+        echo "were not found. Aborted."
+        return 2
+    fi
+}
+
 # Specific to GNU coreutils
 if ls --version >/dev/null 2>&1; then
 
