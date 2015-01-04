@@ -31,6 +31,17 @@ umask 077
 # The default umask is now handled by pam_umask.
 # See pam_umask(8) and /etc/login.defs.
 umask 077
+#}}}
+
+# Load other script profiles from /etc/profile.d
+if [ -d "/etc/profile.d" ]; then
+    for i in "/etc/profile.d/*.sh"; do
+        if [ -r "$i" ]; then
+            . "$i"
+        fi
+    done
+    unset i
+fi
 
 # Set our default path
 export PATH="/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/local/bin:."
@@ -46,14 +57,6 @@ if type vim >/dev/null 2>&1; then
     export EDITOR="vim"
 fi
 
-# Load other script profiles from /etc/profile.d
-if [ -d "/etc/profile.d" ]; then
-    for i in /etc/profile.d/*.sh; do
-        if [ -r $i ]; then
-            . $i
-        fi
-    done
-    unset i
 fi
 
 # - An interative shell is a shell we can interract directly with. By contrast,
