@@ -299,23 +299,14 @@ chart
 
 #{{{ SSH-agent management
 #-------------------------------------------------------------------------------
-# Load ssh-agent and use its environment variables.
-# README: Please ensure this part of script is loaded from the profile file
-# level (/etc/profile or ~/.bash_profile). This will avoid the ssh-agent
-# process to be forked each time the user launches a new login shell (TTY or in
-# UI) and avoid high memory increase.
-set -o functrace
-function ssh-agentManagement
-{
-    if ! type ssh-agent >/dev/null 2>&1; then
-        echo "[${RED}-${OFF}] ssh-agent not found!"
-        return 1
-    fi
+# Load ssh-agent and use its environment variables. This function must be
+# sourced from the profile file level to avoid the ssh-agent process to be
+# forked each time the user launches a new login shell (TTY or in UI) and avoid
+# high memory increase.
+function ssh-agentManagement() {
 
-    if ! type ssh-add >/dev/null 2>&1; then
-        echo "[${RED}-${OFF}] ssh-add not found!"
-        return 1
-    fi
+    checkDep "ssh-agent ssh-add umask mkdir chmod"
+    if [ $? -gt 0 ]; then return 1; fi
 
     local destinationFolder="$HOME/.ssh"
 
