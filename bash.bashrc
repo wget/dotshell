@@ -191,7 +191,9 @@ else
     LSCOLORS=ExGxFxdxCxHgHghbabacad
 fi
 
-# Add some colors to the less command
+alias ll='ls -alh'
+
+# Add colors to manpages (man is using less as internal pager).
 export LESS_TERMCAP_mb=$(tput bold; tput setaf 2) # green
 export LESS_TERMCAP_md=$(tput bold; tput setaf 6) # cyan
 export LESS_TERMCAP_me=$(tput sgr0)
@@ -206,6 +208,8 @@ export LESS_TERMCAP_ZV=$(tput rsubm)
 export LESS_TERMCAP_ZO=$(tput ssupm)
 export LESS_TERMCAP_ZW=$(tput rsupm)
 
+# Only ANSI color escape sequences are output in raw form to be interpreted by
+# the shell.
 LESS="--RAW-CONTROL-CHARS"
 
 # Add the fatest way to get our public ip address
