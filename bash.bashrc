@@ -39,8 +39,9 @@ elif [ -r /usr/share/bash-completion/bash_completion ]; then
 fi
 
 # Display directly file content from compressed files by making the 'less'
-# command  more friendly for non-text input files, see lesspipe(1)
-[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+# command aware of some non-text input files, see lesspipe(1).
+[ -x /bin/lesspipe ] && eval $(/bin/lesspipe) ||\
+[ -x /usr/sbin/lesspipe.sh ] && eval $(/usr/sbin/lesspipe.sh)
 
 # If the Debian command-not-found package is installed, use it and suggests
 # installation of packages in interactive bash sessions.
