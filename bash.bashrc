@@ -2,40 +2,40 @@
 
 #{{{ General settings
 #-------------------------------------------------------------------------------
-# If not running interactively don't do anything and quit config.
+# Even if the same checks have been performed in our profile file, this is
+# needed if someone wants just to use our bashrc and source it from its
+# profile file without doing any checks.
 
-# An interactive shell reads command from user input, displays a prompt (if
-# using default settings) and enables jobs control. A shell running a script is
-# always running in non-interactive mode. 
-[[ $- != *i* ]] && return
-# The following method is unsufficient to check if a shell is interactive, do
-# not use it. It is only valid if the user hasn't modified the default PS1
-# variable used in interactive mode (default is empty), which might not be the
-# case.
-#[ -z "$PS1" ] && return
+# Leave if the shell is not Bash.
+[ -z "$BASH" ] && return
 
-# Load a 256 colors terminal emulator, useful for advanced colorschemes in Vim.
-# if [ -e /usr/share/terminfo/x/xterm-256color ] \
-#     || [ -e /usr/share/terminfo/x/xterm+256color ]; then
-#     export TERM='xterm-256color'
-# else
-#     export TERM='xterm-color'
-# fi
+# Leave if not running interactively.
+case $- in
+    *i*);;
+    *)return;;
+esac
+
+# Leave if the builtin Bash shopt command is not found. This means we have
+# a huge problem here. User needs to be warned.
+if ! type shopt >/dev/null 2>&1; then
+    echo "[${RED}-${OFF}] [$0] shopt was not found but this shell reports to be Bash."
+    return
+fi
+
+# Leave if Bash is set to be POSIX compliant.
+if shopt -oq posix; then
+    echo "[${GREEN}-${OFF}] [$0] POSIX compliant mode enabled. Not sourcing further."
+    return
+fi
 
 # Check the window size after each typed command and, if necessary, update the
 # values of LINES and COLUMNS shell variables.
-if type shopt >/dev/null 2>&1; then
-    shopt -s checkwinsize
-fi
+shopt -s checkwinsize
 
-# Enable bash completion in interactive shells only if the shells don't have to
-# be POSIX compliant.
-if [ "! shopt -oq posix" ]; then
-    if [ -r /etc/bash_completion ]; then
-        . /etc/bash_completion
-    elif [ -r /usr/share/bash-completion/bash_completion ]; then
-        . /usr/share/bash-completion/bash_completion
-    fi
+if [ -r /etc/bash_completion ]; then
+    . /etc/bash_completion
+elif [ -r /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
 fi
 
 # Display directly file content from compressed files by making the 'less'
@@ -69,9 +69,7 @@ fi
 #{{{ Historic management
 #-------------------------------------------------------------------------------
 # Append to the history file, don't overwrite it.
-if type shopt >/dev/null 2>&1; then
-    shopt -s histappend
-fi
+shopt -s histappend
 
 # By default console commands' history is saved only when you type 'exit' in
 # your GUI console. When you close your console with 'x' in the corner, it does
@@ -112,26 +110,16 @@ HISTSIZE=1000
 
 #{{{ Prompt management
 #-------------------------------------------------------------------------------
-# Colorize and customize the prompt 
-
-# This configuration is only valid for Bash as other shells like zsh uses
-# another syntax (e.g. %n instead of \u for the username)
-if [ "$BASH" ]; then
-    if type tput >/dev/null 2>&1; then
-        if [ $EUID -ne 0 ]; then
-            # The variable PROMPT_COMMAND contains a regular bash command that
-            # is executed just before the command prompt is displayed.  This
-            # variable can be thus used to modify prompt, as it is executed at
-            # each time.
-            # e.g.: PROMPT_COMMAND=${COMMAND_PROMPT}:+$PROMPT_COMMAND;}
-            # 'YOUR COMMAND HERE'
-            PS1='\[\e[31m\][\[\e[1;32m\]\u\[\e[00m\]@\h \[\e[36m\]\W\[\e[00m\]\[\e[31m\]]\[\e[00m\]\$ '
-        else
-            PS1='\[\e[31m\][\[\e[1;31m\]\u\[\e[0m\]@\h \[\e[36m\]\W\[\e[31m\]]\[\e[1;31m\]\$\[\e[0m\] '
-        fi
-    else
-        PS1='[\u@\h \W]\$ '
-    fi
+# This PS1 syntax is only valid for Bash, other shells like zsh uses another one
+# (e.g. %n instead of \u for the username).
+if [ $EUID -ne 0 ]; then
+    # The variable PROMPT_COMMAND contains a regular bash command that is
+    # executed just before the command prompt is displayed. This variable can be
+    # thus used to modify prompt, as it is executed at each time. e.g.:
+    # PROMPT_COMMAND=${COMMAND_PROMPT}:+$PROMPT_COMMAND;} 'YOUR COMMAND HERE'
+    PS1='\[\e[31m\][\[\e[1;32m\]\u\[\e[00m\]@\h \[\e[36m\]\W\[\e[00m\]\[\e[31m\]]\[\e[00m\]\$ '
+else
+    PS1='\[\e[31m\][\[\e[1;31m\]\u\[\e[0m\]@\h \[\e[36m\]\W\[\e[31m\]]\[\e[1;31m\]\$\[\e[0m\] '
 fi
 
 case ${TERM} in
