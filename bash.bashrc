@@ -310,52 +310,104 @@ function ssh-agentManagement() {
 
     local destinationFolder="$HOME/.ssh"
 
-    # Ensure the destination folder really exists before continuing.
+    # Ensure the destination folder really exists, is writable and executable before continuing.
+    # If it does not exists, try to create it.
+    if [ ! -e "$destinationFolder" ]; then
+
+        # Reset default umask
+        [ $UID == 0 ] && umask 0022 || umask 0002
+        if ! mkdir -p "$destinationFolder" >/dev/null 2>&1; then
+            echo "[${RED}-${OFF}] Cannot create \"$destinationFolder\". Please check the permissions of the parent folder. Aborted."
+            return 21
+        fi
+    fi
+
     if [ -f "$destinationFolder" ]; then
         echo "[${RED}-${OFF}] \"$destinationFolder\" is already a file. Aborted."
-        return 2
-    elif [ ! -d "$destinationFolder" ] && ! mkdir -p "$destinationFolder" >/dev/null 2>&1; then
-        echo "[${RED}-${OFF}] Cannot create \"$destinationFolder\". Please check your file permissions. Aborted."
-        return 3
+        return 22
+    fi
+    if [ ! -d "$destinationFolder" ]; then
+        echo "[${RED}-${OFF}] \"$destinationFolder\" is a special file (block device, socket, pipe,...). Aborted."
+        return 23
     fi
 
-    local destinationFile="$destinationFolder/agent"
+    if [ ! -x "$destinationFolder" ] && ! chmod u+rwx "$destinationFolder"; then
+        echo "[${RED}-${OFF}] \"$destinationFolder\" is not executable and permissions cannot be changed. Maybe this folder belongs to another user. Aborted."
+        return 24
+    fi
+
+    local agentFile="$destinationFolder/agent"
+    if [ ! -f "$agentFile" ]; then
+        # Writing or removing a file from a folder is only authorized if that
+        # folder is writable.
+        if [ ! -w "$destinationFolder" ] && ! chmod u+rwx "$destinationFolder"; then
+            echo "[${RED}-${OFF}] \"$destinationFolder\" is not writable and permissions cannot be changed. Maybe this folder belongs to another user. Aborted."
+            return 25
+        fi
+
+        # If the file exists, this means this is not a regular file, try to remove it.
+        if [ -e "$agentFile" ]; then
+            if [ -d "$agentFile" ]; then
+                echo -n "[${CYAN}?${OFF}] \"$agentFile\" is a directory, do you want to remove it? [y/N] "
+            else
+                echo -n "[${CYAN}?${OFF}] \"$agentFile\" already exist and is not a regular file, do you want to remove it? [y/N] "
+            fi
+
+            local answer=''
+            read answer
+            if [ "$answer" == 'y' ] || [ "$answer" == 'Y' ]; then
+                if ! rm -fr "$agentFile" >/dev/null 2>&1; then
+                    echo "[${RED}-${OFF}] \""$agentFile"\" cannot be removed. Aborted."
+                    return 26
+                fi
+                echo "[${GREEN}+${OFF}] \""$agentFile"\" removed."
+            else
+                echo "[${RED}-${OFF}] \""$agentFile"\" will not be removed. Aborted."
+                return 27
+            fi
+        fi
+
+        # Create an empty regular file
+        [ $UID == 0 ] && umask 0022 || umask 0002
+        echo -n '' > "$agentFile"
+    fi
     
-    if [ -r "$destinationFile" ]; then
-        source "$destinationFile" >/dev/null 2>&1
+    if [ ! -r "$agentFile" ] && chmod u+r "$agentFile"; then
+        echo "[${RED}-${OFF}] \"$agentFile\" cannot be made readable: your ssh-agent will not be usable in other sessions. Aborted."
+        return 28
     fi
 
-    # If there is a valid ssh-agent socket, we assume ssh-agent is already
-    # loaded, don't need to load it again and stop now then.
-    if [ -S "$SSH_AUTH_SOCK" ]; then
-        return 6
+    # Try to recover the previously ssh-agent socket. If it is valid, we assume
+    # ssh-agent is already loaded and we don't need to load it again.
+    if source "$agentFile" >/dev/null 2>&1 && [ -S "$SSH_AUTH_SOCK" ]; then
+        return 29
     fi
 
-    # If we haven't any keys stored, why use ssh-agent? Don't launch it then.
+    # If we have no keys stored, do not launch ssh-agent.
     local keysLocationFile="$destinationFolder/keys_location"
+    local keysLocation=''
     if [ -r "$keysLocationFile" ]; then
-        local keysLocation=$(<"$keysLocationFile")
+        keysLocation=$(<"$keysLocationFile")
     fi
     if [ ! -r "$destinationFolder/id_rsa" ] &&
        [ ! -r "$destinationFolder/id_dsa" ] &&
        [ ! -r "$destinationFolder/id_ecdsa" ] &&
        [ ! -r "$destinationFolder/identity" ] && 
        [ -z "$keysLocation" ]; then
-        return 5
-    fi
-    
-    if [ -f "$destinationFile" ] && [ ! -r "$destinationFile" ]; then
-        echo "[${RED}-${OFF}] \"$destinationFile\" isn't readable and your ssh-agent won't be usable in other sessions. Aborted."
-        return 4
+        return 30
     fi
 
-    # NOTE: Brackets are only needed to replace the following bash error
-    # message 'bash: agent: Permission denied' with our own.
-    if { ! ssh-agent > "$destinationFile"; } 2>/dev/null; then
-        echo "[${RED}-${OFF}] Unable to launch ssh-agent. Please check the file permission for \"$destinationFile\". Aborted."
-        return 3
+    if [ ! -w "$agentFile" ] && chmod u+w "$agentFile"; then
+        echo "[${RED}-${OFF}] \"$agentFile\" cannot be made writable: unable to launch ssh-agent. Aborted."
+        return
     fi
-    source "$destinationFile" >/dev/null 2>&1
+    
+    if ! ssh-agent > "$agentFile" >/dev/null 2>&1; then
+        echo "[${RED}-${OFF}] Unable to launch ssh-agent. Aborted."
+        return 31
+    fi
+
+    source "$agentFile" >/dev/null 2>&1
 
     echo "[${GREEN}+${OFF}] Using ssh-agent \(PID $SSH_AGENT_PID\)"
 
@@ -363,23 +415,31 @@ function ssh-agentManagement() {
     ssh-add
 
     # Load other keys where the location has been defined by the user.
-    
-    # NOTE: These keys paths have to be defined as absolute path, as bash
-    # cannot expands vars recursively.
     if [ -n "$keysLocationFile" ]; then
         # Transform space delimited keysLocation variable into an array for
         # easy usage.
         keysLocation=($keysLocation)
         for ((i = O; i < ${#keysLocation[@]}; i++)); do
             if [ ! -r "${keysLocation[i]}" ]; then
-                echo "[${RED}-${OFF}] The SSH-key \"${keysLocation[i]}\" specified at line $(($i + 1)) of \"$keysLocationFile\" isn't readable."
-            else
-                ssh-add "$keysLocation"
+                echo "[${RED}-${OFF}] The SSH-key \"${keysLocation[i]}\" specified at line $(($i + 1)) in \"$keysLocationFile\" is not readable."
+                continue
             fi
+
+            # NOTE: These keys paths have to be defined as absolute path, as bash
+            # cannot expands vars recursively.
+            if [[ "${keysLocation[i]}" == */../* ||\
+                  "${keysLocation[i]}" == */./* ||\
+                  "${keysLocation[i]}" == ..* ||\
+                  "${keysLocation[i]}" == .* ]]; then
+                echo "[${ORANGE}-${OFF}] The SSH-key \"${keysLocation[i]}\" specified at line $(($i + 1)) is not an absolute path. Skipped."
+                continue
+            fi
+            ssh-add "$keysLocation"
         done
     fi
 }
 ssh-agentManagement
+
 #}}}
 
 #{{{ Platform specific
