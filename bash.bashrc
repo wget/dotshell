@@ -159,25 +159,36 @@ PS4='+ '
 
 #{{{ Aliases
 #-------------------------------------------------------------------------------
-# dircolors enhances the colored command output; for example with ls,
-# broken (orphan) symlinks will be shown in a red hue.
-if type dircolors >/dev/null 2>&1 && [ $(uname) == 'Darwin' ] || [ $(uname) == 'Linux' ]; then
-    [ -r "~/.dircolors" ] && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+# Specific to GNU coreutils
+if ls --version >/dev/null 2>&1; then
+
+    # Override default color database used by dircolors.
+    if [ -r "~/.dircolors" ]; then
+        eval "$(dircolors -b ~/.dircolors)"
+    fi
+
+    # See this link for details
+    # http://www.bigsoft.co.uk/blog/index.php/2008/04/11/configuring-ls_colors
+    # http://backup.noiseandheat.com/blog/2011/12/os-x-lion-terminal-colours/
+    #LS_COLORS='di=1:fi=0:ln=31:pi=5:so=5:bd=5:cd=5:or=31:*.deb=90'
+    #export LS_COLORS
+
     alias ls='ls --color=auto'
     alias grep='grep --color=auto'
     alias fgrep='fgrep --color=auto'
     alias egrep='egrep --color=auto'
-fi
 
-# Checking here if the 'ls' command has all the argument is needed because
-# busybox might not have all of these.
-if ls -alh >/dev/null 2>&1; then
-    alias ll='ls -alh'
-fi
-
-# For security reasons, redefine the default behaviour
-if [[ "$(uname)" == "Linux" ]]; then
+    # For security reasons, redefine the default GNU behaviour.
     alias rm='rm --preserve-root'
+
+# Specific BSD utils
+else
+    # See
+    # http://www.marinamele.com/2014/05/customize-colors-of-your-terminal-in-mac-os-x.html
+    export CLICOLOR=1
+    # Try to have the same colors as the default GNU ones; but LSCOLORS does
+    # not have yellow.
+    LSCOLORS=ExGxFxdxCxHgHghbabacad
 fi
 
 # Add some colors to the less command
