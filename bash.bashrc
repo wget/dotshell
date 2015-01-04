@@ -133,9 +133,7 @@ else
     PS1='\[\e[31m\][\[\e[1;31m\]\u\[\e[0m\]@\h \[\e[36m\]\W\[\e[31m\]]\[\e[1;31m\]\$\[\e[0m\] '
 fi
 
-case ${TERM} in
-    #xterm*|rxvt*|Eterm|aterm|kterm|gnome*)
-    #;;
+case $TERM in
     screen)
         PS1='(screen)'$PS1
     ;;
