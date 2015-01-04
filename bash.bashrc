@@ -250,6 +250,45 @@ if type dig >/dev/null 2>&1; then
 else
   echo "[${RED}-${OFF}] dig was not found! This command is usually found in the 'dnsutils' package of common GNU/Linux distributions."
 fi'
+# Display a UNIX command line histogram (graphical view) of the 20 most used
+# commands. Taken from: http://www.smallmeans.com/notes/shell-history/
+function chart() {
+
+    checkDep "history awk sort uniq head"
+    if [ $? -gt 0 ]; then return 1; fi
+
+    # Retrieve history (bash built-in)
+    history|
+
+    # Use the AWK language to only print the 2nd column. Using cut does not
+    # work, since items are right aligned, and algorithm must be changed in
+    # order to handle this (aligment of  |  80 is different from | 100).
+    awk '{print $2}'|
+
+    # Sort, so that similar commands come in groups
+    sort|
+
+    # Count subsequent items (-c prepends count)
+    uniq -c|
+
+    # Sort in descending order (reverse)
+    sort -rn|
+
+    # Get the 20 most frequent commands
+    head -20|
+
+
+    awk '!max{max=$1;}{
+         r="";
+         i=s=60*$1/max;
+         while(i-->0) {
+             r=r"#";
+         }
+         printf "%15s %5d %s %s",$2,$1,r,"\n";
+     }'
+}
+chart
+
 #}}}
 
 #{{{ SSH-agent management
