@@ -98,6 +98,9 @@ fi
 # Man is much better than us at figuring this out
 #unset MANPATH
 
-# Disable annoying beep PC speaker sound
-setterm -blength 0
 
+# Disable annoying beep PC speaker sound. setterm set terminal TTY attributes.
+# And is only valid for Linux and Minix.
+if setterm --version >/dev/null 2>&1; then
+    setterm -blength 0 >/dev/null 2>&1
+fi
