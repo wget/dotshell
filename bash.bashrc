@@ -43,26 +43,41 @@ fi
 [ -x /bin/lesspipe ] && eval $(/bin/lesspipe) ||\
 [ -x /usr/sbin/lesspipe.sh ] && eval $(/usr/sbin/lesspipe.sh)
 
-# If the Debian command-not-found package is installed, use it and suggests
+# If the command-not-found package is installed, use it and suggest
 # installation of packages in interactive bash sessions.
 #
-# Checking before defining the function is needed to avoid redefining an
-# unneeded handler always present in memory.
-if [ -x /usr/bin/command-not-found ] || [ -x /usr/share/command-not-found ]; then
-    function command_not_found_handle
-    {
-        # NOTE: the ArchLinux command-not-found handler is defined by the
-        # /etc/profile.d/cnf.sh shell script. This script is automatically
-        # sourced by my custom /etc/profile which sources all files present in
-        # /etc/profile.d. On ArchLinux, the command-not-found command is
-        # actually cnf-lookup, so checking for command-not-found at its
-        # different possible locations is sufficient to avoid defining an
-        # uneeded handler.
-        if [ -x /usr/bin/command-not-found ]; then
-            /usr/bin/command-not-found "$1"
-        elif [ -x /usr/share/command-not-found ]; then
-            /usr/share/command-not-found/command-not-found "$1"
+# NOTE: the ArchLinux command-not-found handler is defined by the shell script
+# located at /etc/profile.d/cnf.sh which is automatically sourced by our
+# /etc/profile which sources all files present in /etc/profile.d. On ArchLinux,
+# the command-not-found command is actually cnf-lookup, so checking for each
+# possible location of command-not-found is enough to avoid defining an uneeded
+# handler.
+if [ -x '/usr/lib/command-not-found' ]; then
+    function command_not_found_handle() {
+        /usr/bin/command-not-found "$1"
+        if [ ! $? -eq 0 ]; then
+            echo "bash: $1: command not found"
         fi
+
+        # In UNIX the 127 value returned by the shell means the command was not
+        # found.
+        return 127
+    }
+elif [ -x '/usr/share/command-not-found/command-not-found' ]; then
+    function command_not_found_handle() {
+        /usr/share/command-not-found/command-not-found "$1"
+        if [ ! $? -eq 0 ]; then
+            echo "bash: $1: command not found"
+        fi
+        return 127
+    }
+elif [ -x '/usr/bin/cnf-lookup' ]; then
+    function command_not_found_handle() {
+        cnf-lookup -c $1
+        if [ ! $? -eq 0 ]; then
+            echo "bash: $1: command not found"
+        fi
+        return 127
     }
 fi
 #}}}
