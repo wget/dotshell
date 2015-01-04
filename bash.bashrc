@@ -1,13 +1,5 @@
 # System-wide .bashrc file for interactive bash(2) shells.
 
-# To enable the settings / commands in this file for login shells as well, this
-# file has to be sourced in /etc/profile.
-#
-# The /etc/bash.bashrc file isn't a standard location, the latter is only
-# available in some linux distributions, as packagers have defined
-# a -DSYS_BASHRC="/etc/bash.bashrc" flag at the Bash compilation time in order
-# to provide a system-wide bashrc location.
-
 #{{{ Terminal colors
 #-------------------------------------------------------------------------------
 BLUE="[34;01m"
