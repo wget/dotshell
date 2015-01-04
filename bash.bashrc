@@ -293,7 +293,6 @@ function chart() {
          printf "%15s %5d %s %s",$2,$1,r,"\n";
      }'
 }
-chart
 
 #}}}
 
