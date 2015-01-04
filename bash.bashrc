@@ -88,8 +88,8 @@ fi
 shopt -s histappend
 
 # By default console commands' history is saved only when you type 'exit' in
-# your GUI console. When you close your console with 'x' in the corner, it does
-# not happen.
+# your GUI console. When you close your GUI terminal typically with 'x' in the
+# wondow corner, it does not work.
 # Use the following line to enable autosaving after every command execution and
 # make the history accessible from every terminal tabs or windows (e.g.: if ls
 # is executed in one, switch to another already-running terminal and then press
@@ -104,22 +104,17 @@ shopt -s histappend
 # already-open terminal.
 export PROMPT_COMMAND="history -a; history -c; history -r; $PROMPT_COMMAND"
 
-# Line matching the previous line history won't be saved.
-# NOTE: HISTCONTROL is a colon separated list.
-# HISTCONTROL=ignoredups
-
-# Lines which begin with a space character are not saved in the history.
-# HISTCONTROL+=:ignorespace
-
-# ignoreboth is a shortcut for ignoredups and ignorespace described just above.
+# Line matching any previous line history will not be saved (ignoredups), and
+# lines beginning with a space character are not saved in the history
+# (ignorespace). ignoreboth is a shortcut for these two values.
 HISTCONTROL=ignoreboth
 
 # Max number of lines command to save in the history (default 500).
 HISTSIZE=1000
 
 # The maximum number of lines (default 500) contained in our custom history
-# file which defined with HISTFILE attribute (default to ~/.bash_history).
-# This parameter isn't needed here as we don't change HISTFILE location.
+# file which is defined with HISTFILE attribute (default to ~/.bash_history).
+# This parameter is not needed here as we do not change HISTFILE location.
 #HISTFILESIZE=2000
 
 #}}}
