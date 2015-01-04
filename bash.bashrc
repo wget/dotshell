@@ -243,13 +243,19 @@ export LESS_TERMCAP_ZW=$(tput rsupm)
 # the shell.
 LESS="--RAW-CONTROL-CHARS"
 
-# Add the fatest way to get our public ip address
-alias myip='
-if type dig >/dev/null 2>&1; then
-    dig +short myip.opendns.com @resolver1.opendns.com
-else
-  echo "[${RED}-${OFF}] dig was not found! This command is usually found in the 'dnsutils' package of common GNU/Linux distributions."
-fi'
+# Using dig (which is available on OS X too, by default) is the fastest way to
+# get our public IP address. We could have defined the code inside an alias
+# instead, but this is causing a problem with nested quotes which are simply
+# not interpreted. Moreover, proceeding with aliases we werelosing syntax
+# highlighting.
+function myip() {
+    if type dig >/dev/null 2>&1; then
+       dig +short myip.opendns.com @resolver1.opendns.com
+    else
+      echo "[${RED}-${OFF}] dig was not found! This command is usually found in the 'dnsutils' package of common GNU/Linux distributions."
+    fi
+}
+
 # Display a UNIX command line histogram (graphical view) of the 20 most used
 # commands. Taken from: http://www.smallmeans.com/notes/shell-history/
 function chart() {
