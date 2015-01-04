@@ -43,17 +43,9 @@ fi
 # Set our default path
 export PATH="/usr/sbin:/usr/bin:/sbin:/bin:/usr/local/sbin:/usr/local/bin:."
 
-# When compiling in CLI, enable ccache by taking precedence over the usual gcc
-# toolchain and use the one customized by ccache package.
-if [ -d "/usr/lib/ccache/bin" ]; then
-    export PATH="/usr/lib/ccache/bin/:$PATH"
-fi
-
 # Change the default editor to vim if it exists.
 if type vim >/dev/null 2>&1; then
     export EDITOR="vim"
-fi
-
 fi
 
 # - An interative shell is a shell we can interract directly with. By contrast,
