@@ -64,11 +64,9 @@ function checkDep() {
     fi
 }
 
-# Source platform specific code from another file
-# NOTE: The location "./bash_specific.bashrc" cannot be used since this will
-# only check the current directory the user sourcing this script is in (default
-# is /home when booting the machine). This is not what we want. Get inspiration
-# from
+# Get the directory where this file is stored in, if that directory is
+# a symlink, follow that symlink
+# Get inspiration from
 # http://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
 function getScriptDirectory() {
     local source="${BASH_SOURCE[0]}"
@@ -471,6 +469,11 @@ unset -f manageSshAgent
 
 #{{{ Platform specific
 #-------------------------------------------------------------------------------
+# Source platform specific code from another file
+# NOTE: The location "./bash_specific.bashrc" cannot be used since this will
+# only check the current directory the user sourcing this script is in (default
+# is /home when booting the machine). This is not what we want. Thus we need to
+# call our global command we created.
 getScriptDirectory
 if [ -r "${scriptDirectory}/bash_specific.bashrc" ]; then
     . ${scriptDirectory}/bash_specific.bashrc
