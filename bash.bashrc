@@ -1,6 +1,7 @@
 # System-wide .bashrc file for interactive bash(2) shells.
 
-#{{{ General settings
+
+#{{{ Bash check
 #-------------------------------------------------------------------------------
 # Even if the same checks have been performed in our profile file, this is
 # needed if someone wants just to use our bashrc and source it from its
@@ -27,7 +28,66 @@ if shopt -oq posix; then
     echo "[${GREEN}-${OFF}] [$0] POSIX compliant mode enabled. Not sourcing further."
     return
 fi
+#}}}
 
+
+#{{{ Declaration of generic functions local to this file
+#-------------------------------------------------------------------------------
+# Function used below checking if external tools are available. Can be used
+# from the shell directly since this is a function.
+function checkDep() {
+    local deps=($1)
+    local notFound=()
+
+    for i in "${deps[@]}"; do
+        if ! type $i >/dev/null 2>&1; then
+            notFound+=($i)
+        fi
+    done
+
+    if [ ${#notFound[@]} -eq 0 ]; then
+        return 0
+    fi
+
+    if [ ${#notFound[@]} -eq 1 ]; then
+        echo "[${RED}-${OFF}] \"$i\" was found! Aborted."
+        return 1
+    fi
+
+    if [ ${#notFound[@]} -gt 1 ]; then
+        echo -n "[${RED}-${OFF}] "
+        for i in "${notFound[@]}"; do
+            echo -n "\"$i\" "
+        done
+        echo "were not found. Aborted."
+        return 2
+    fi
+}
+
+# Source platform specific code from another file
+# NOTE: The location "./bash_specific.bashrc" cannot be used since this will
+# only check the current directory the user sourcing this script is in (default
+# is /home when booting the machine). This is not what we want. Get inspiration
+# from
+# http://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
+function getScriptDirectory() {
+    local source="${BASH_SOURCE[0]}"
+    local dir=''
+    # Resolve $source until the file is no longer a symlink
+    while [ -h "$source" ]; do
+        dir="$(cd -P "${source%/*}" && echo ${PWD})"
+        source="$(readlink "$source")"
+        # If $source was a relative symlink, we need to resolve it relative to
+        # the path where the symlink file was located
+        [[ $source != /* ]] && source="$dir/$source"
+    done
+    dir="$(cd -P "${source%/*}" && echo ${PWD})"
+    scriptDirectory="$dir"
+}
+#}}}
+
+#{{{ General settings
+#-------------------------------------------------------------------------------
 # Check the window size after each typed command and, if necessary, update the
 # values of LINES and COLUMNS shell variables.
 shopt -s checkwinsize
@@ -116,7 +176,6 @@ HISTSIZE=1000
 # file which is defined with HISTFILE attribute (default to ~/.bash_history).
 # This parameter is not needed here as we do not change HISTFILE location.
 #HISTFILESIZE=2000
-
 #}}}
 
 #{{{ Prompt management
@@ -159,37 +218,6 @@ PS4='+ '
 
 #{{{ Aliases
 #-------------------------------------------------------------------------------
-# Function used below checking if external tools are available. Can be used
-# from the shell directly since this is a function.
-function checkDep() {
-    local deps=($1)
-    local notFound=()
-
-    for i in "${deps[@]}"; do
-        if ! type $i >/dev/null 2>&1; then
-            notFound+=($i)
-        fi
-    done
-
-    if [ ${#notFound[@]} -eq 0 ]; then
-        return 0
-    fi
-
-    if [ ${#notFound[@]} -eq 1 ]; then
-        echo "[${RED}-${OFF}] \"$i\" was found! Aborted."
-        return 1
-    fi
-
-    if [ ${#notFound[@]} -gt 1 ]; then
-        echo -n "[${RED}-${OFF}] "
-        for i in "${notFound[@]}"; do
-            echo -n "\"$i\" "
-        done
-        echo "were not found. Aborted."
-        return 2
-    fi
-}
-
 # Specific to GNU coreutils
 if ls --version >/dev/null 2>&1; then
 
@@ -293,7 +321,6 @@ function chart() {
          printf "%15s %5d %s %s",$2,$1,r,"\n";
      }'
 }
-
 #}}}
 
 #{{{ SSH-agent management
@@ -302,7 +329,7 @@ function chart() {
 # sourced from the profile file level to avoid the ssh-agent process to be
 # forked each time the user launches a new login shell (TTY or in UI) and avoid
 # high memory increase.
-function ssh-agentManagement() {
+function manageSshAgent() {
 
     checkDep "ssh-agent ssh-add umask mkdir chmod"
     if [ $? -gt 0 ]; then return 1; fi
@@ -437,36 +464,25 @@ function ssh-agentManagement() {
         done
     fi
 }
-ssh-agentManagement
+manageSshAgent
+unset -f manageSshAgent
 
 #}}}
 
 #{{{ Platform specific
 #-------------------------------------------------------------------------------
-# Source platform specific code from another file
-#
-# NOTE: The location "./bash_specific.bashrc" cannot be used since this will
-# only check the current directory the user sourcing this script is in (default
-# is /home when booting the machine). This is not what we want. Get inspiration
-# from
-# http://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
-function getScriptDirectory() {
-    local source="${BASH_SOURCE[0]}"
-    local dir=''
-    # Resolve $source until the file is no longer a symlink
-    while [ -h "$source" ]; do
-        dir="$(cd -P "${source%/*}" && echo ${PWD})"
-        source="$(readlink "$source")"
-        # If $source was a relative symlink, we need to resolve it relative to the path where the symlink file was located
-        [[ $source != /* ]] && source="$dir/$source"
-    done
-    dir="$(cd -P "${source%/*}" && echo ${PWD})"
-    scriptDirectory="$dir"
-}
 getScriptDirectory
 if [ -r "${scriptDirectory}/bash_specific.bashrc" ]; then
     . ${scriptDirectory}/bash_specific.bashrc
 fi
-unset scriptDirectory
+#}}}
+
+#{{{ Undeclaration of generic functions local to this file
+#-------------------------------------------------------------------------------
+unset -f getScriptDirectory
+
+# Even if this global variable was created inside getScriptDirectory which is
+# a own function, removing that function does not remove that global variable.
+unset -v scriptDirectory
 
 #}}}
