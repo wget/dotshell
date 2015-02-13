@@ -32,7 +32,7 @@ umask 077
 
 # Load other script profiles from /etc/profile.d
 if [ -d "/etc/profile.d" ]; then
-    for i in "/etc/profile.d/*.sh"; do
+    for i in /etc/profile.d/*.sh; do
         if [ -r "$i" ]; then
             . "$i"
         fi
