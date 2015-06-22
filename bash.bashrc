@@ -98,8 +98,18 @@ fi
 
 # Display directly file content from compressed files by making the 'less'
 # command aware of some non-text input files, see lesspipe(1).
-[ -x /bin/lesspipe ] && eval $(/bin/lesspipe) ||\
-[ -x /usr/sbin/lesspipe.sh ] && eval $(/usr/sbin/lesspipe.sh)
+#
+# Note 1: Don't try to use 'source' or 'exec' or remove $(). This doesn't work.
+# Note 2: Contrary to the man pages and languages like C/C++, && and || have the
+# same precedence in Bash. The latter will thus evaluate
+# A && B || C && D as (((A && B) || C) && D)
+# taking elements from left to right. Which will gives A, B, D. Using 'if'
+# statements is much more cleaner.
+if [ -x /bin/lesspipe ]; then
+    eval $(/bin/lesspipe)
+elif [ -x /usr/sbin/lesspipe.sh ]; then
+    eval $(/usr/sbin/lesspipe.sh)
+fi
 
 # If the command-not-found package is installed, use it and suggest
 # installation of packages in interactive bash sessions.
