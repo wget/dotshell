@@ -329,6 +329,28 @@ function chart() {
          printf "%15s %5d %s %s",$2,$1,r,"\n";
      }'
 }
+
+# Allow to explain what a command does without having to read each man pages of
+# the subcommands involved. Source:
+# https://www.mankier.com/blog/explaining-shell-commands-in-the-shell.html
+explain () {
+
+    checkDep "curl"
+    if [ $? -gt 0 ]; then return 1; fi
+
+    if [ "$#" -eq 0 ]; then
+        while read  -p "Command: " cmd; do
+            curl -Gs "https://www.mankier.com/api/explain/?cols="$(tput cols) --data-urlencode "q=$cmd"
+        done
+        echo "Bye!"
+    elif [ "$#" -eq 1 ]; then
+        curl -Gs "https://www.mankier.com/api/explain/?cols="$(tput cols) --data-urlencode "q=$1"
+    else
+        echo "Usage"
+        echo "explain                  interactive mode."
+        echo "explain 'cmd -o | ...'   one quoted command to explain it."
+    fi
+}
 #}}}
 
 #{{{ SSH-agent management
