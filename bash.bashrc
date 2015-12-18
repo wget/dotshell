@@ -342,6 +342,8 @@ explain () {
         while read  -p "Command: " cmd; do
             curl -Gs "https://www.mankier.com/api/explain/?cols="$(tput cols) --data-urlencode "q=$cmd"
         done
+        # Called only on signals catched by bash except SIGINT, and other
+        # system signals
         echo "Bye!"
     elif [ "$#" -eq 1 ]; then
         curl -Gs "https://www.mankier.com/api/explain/?cols="$(tput cols) --data-urlencode "q=$1"
