@@ -19,69 +19,31 @@ esac
 # Leave if the builtin Bash shopt command is not found. This means we have
 # a huge problem here. User needs to be warned.
 if ! type shopt >/dev/null 2>&1; then
-    echo "[${RED}-${OFF}] [$0] shopt was not found but this shell reports to be Bash."
+    echo "[-] [$0] shopt was not found but this shell reports to be Bash."
     return
 fi
 
 # Leave if Bash is set to be POSIX compliant.
 if shopt -oq posix; then
-    echo "[${GREEN}-${OFF}] [$0] POSIX compliant mode enabled. Not sourcing further."
+    echo "[-] [$0] POSIX compliant mode enabled. Not sourcing further."
     return
 fi
-#}}}
 
-
-#{{{ Declaration of generic functions local to this file
 #-------------------------------------------------------------------------------
-# Function used below checking if external tools are available. Can be used
-# from the shell directly since this is a function.
-function checkDep() {
-    local deps=($1)
-    local notFound=()
-
-    for i in "${deps[@]}"; do
-        if ! type $i >/dev/null 2>&1; then
-            notFound+=($i)
-        fi
-    done
-
-    if [ ${#notFound[@]} -eq 0 ]; then
+# I: /
+# P: Simply load our lib. The strange name is to avoid clashes.
+# O: /
+#-------------------------------------------------------------------------------
+function __wget_bashrc_requireCoreLib() {
+    if . "${PWD}/utils.sh"; then
+        initColors
+        initEffects
         return 0
     fi
-
-    if [ ${#notFound[@]} -eq 1 ]; then
-        echo "[${RED}-${OFF}] \"$i\" was found! Aborted."
-        return 1
-    fi
-
-    if [ ${#notFound[@]} -gt 1 ]; then
-        echo -n "[${RED}-${OFF}] "
-        for i in "${notFound[@]}"; do
-            echo -n "\"$i\" "
-        done
-        echo "were not found. Aborted."
-        return 2
-    fi
+    echo "${FUNCNAME[1]}: Unable to load the required core library. Aborted."
+    return 1
 }
 
-# Get the directory where this file is stored in, if that directory is
-# a symlink, follow that symlink
-# Get inspiration from
-# http://stackoverflow.com/questions/59895/can-a-bash-script-tell-what-directory-its-stored-in
-function getScriptDirectory() {
-    local source="${BASH_SOURCE[0]}"
-    local dir=''
-    # Resolve $source until the file is no longer a symlink
-    while [ -h "$source" ]; do
-        dir="$(cd -P "${source%/*}" && echo ${PWD})"
-        source="$(readlink "$source")"
-        # If $source was a relative symlink, we need to resolve it relative to
-        # the path where the symlink file was located
-        [[ $source != /* ]] && source="$dir/$source"
-    done
-    dir="$(cd -P "${source%/*}" && echo ${PWD})"
-    scriptDirectory="$dir"
-}
 #}}}
 
 #{{{ General settings
@@ -90,9 +52,11 @@ function getScriptDirectory() {
 # values of LINES and COLUMNS shell variables.
 shopt -s checkwinsize
 
-if [ -r /etc/bash_completion ]; then
+if [[ -r /etc/bash_completion &&
+      -f /etc/bash_completion ]]; then
     . /etc/bash_completion
-elif [ -r /usr/share/bash-completion/bash_completion ]; then
+elif [[ -r /usr/share/bash-completion/bash_completion &&
+        -f /usr/share/bash-completion/bash_completion ]]; then
     . /usr/share/bash-completion/bash_completion
 fi
 
@@ -105,9 +69,11 @@ fi
 # A && B || C && D as (((A && B) || C) && D)
 # taking elements from left to right. Which will gives A, B, D. Using 'if'
 # statements is much more cleaner.
-if [ -x /bin/lesspipe ]; then
+if [[ -x /bin/lesspipe &&
+      -f /bin/lesspipe ]]; then
     eval $(/bin/lesspipe)
-elif [ -x /usr/sbin/lesspipe.sh ]; then
+elif [[ -x /usr/sbin/lesspipe.sh &&
+        -r /usr/sbin/lesspipe.sh ]]; then
     eval $(/usr/sbin/lesspipe.sh)
 fi
 
@@ -120,7 +86,8 @@ fi
 # the command-not-found command is actually cnf-lookup, so checking for each
 # possible location of command-not-found is enough to avoid defining an uneeded
 # handler.
-if [ -x '/usr/lib/command-not-found' ]; then
+if [[ -x /usr/lib/command-not-found &&
+      -f /usr/lib/command-not-found ]]; then
     function command_not_found_handle() {
         /usr/bin/command-not-found "$1"
         if [ ! $? -eq 0 ]; then
@@ -131,7 +98,8 @@ if [ -x '/usr/lib/command-not-found' ]; then
         # found.
         return 127
     }
-elif [ -x '/usr/share/command-not-found/command-not-found' ]; then
+elif [[ -x /usr/share/command-not-found/command-not-found &&
+        -f /usr/share/command-not-found/command-not-found ]]; then
     function command_not_found_handle() {
         /usr/share/command-not-found/command-not-found "$1"
         if [ ! $? -eq 0 ]; then
@@ -139,7 +107,8 @@ elif [ -x '/usr/share/command-not-found/command-not-found' ]; then
         fi
         return 127
     }
-elif [ -x '/usr/bin/cnf-lookup' ]; then
+elif [[ -x /usr/bin/cnf-lookup &&
+        -f /usr/bin/cnf-lookup ]]; then
     function command_not_found_handle() {
         cnf-lookup -c $1
         if [ ! $? -eq 0 ]; then
@@ -156,8 +125,8 @@ fi
 shopt -s histappend
 
 # By default console commands' history is saved only when you type 'exit' in
-# your GUI console. When you close your GUI terminal typically with 'x' in the
-# wondow corner, it does not work.
+# the GUI console. When you close your GUI terminal typically with 'x' in the
+# window corner, it does not work.
 # Use the following line to enable autosaving after every command execution and
 # make the history accessible from every terminal tabs or windows (e.g.: if ls
 # is executed in one, switch to another already-running terminal and then press
@@ -180,9 +149,9 @@ HISTCONTROL=ignoreboth
 # Max number of lines command to save in the history (default 500).
 HISTSIZE=1000
 
-# The maximum number of lines (default 500) contained in our custom history
-# file which is defined with HISTFILE attribute (default to ~/.bash_history).
-# This parameter is not needed here as we do not change HISTFILE location.
+# The maximum number of lines (default 500) contained in a custom history file
+# which is defined with HISTFILE attribute (default to ~/.bash_history). This
+# parameter is not needed here as we do not have a custom HISTFILE location.
 #HISTFILESIZE=2000
 #}}}
 
@@ -207,7 +176,8 @@ case $TERM in
 esac
 
 # Enable git prompt
-if [ -r /usr/share/git/git-prompt.sh ]; then
+if [[ -r /usr/share/git/git-prompt.sh &&
+      -f /usr/share/git/git-prompt.sh ]]; then
     . /usr/share/git/git-prompt.sh
     PS1='$(__git_ps1 "(%s)")'$PS1
 fi
@@ -230,7 +200,8 @@ PS4='+ '
 if ls --version >/dev/null 2>&1; then
 
     # Override default color database used by dircolors.
-    if [ -r "~/.dircolors" ]; then
+    if [[ -r ~/.dircolors &&
+          -f ~/.dircolors ]]; then
         eval "$(dircolors -b ~/.dircolors)"
     fi
 
@@ -258,7 +229,7 @@ else
     LSCOLORS=ExGxFxdxCxHgHghbabacad
 fi
 
-alias ll='ls -alh'
+alias ll='LC_ALL='"'"'C.UTF-8'"'"' ls -alh'
 
 # Add colors to manpages (man is using less as internal pager).
 export LESS_TERMCAP_mb=$(tput bold; tput setaf 2) # green
@@ -279,6 +250,15 @@ export LESS_TERMCAP_ZW=$(tput rsupm)
 # the shell.
 LESS="--RAW-CONTROL-CHARS"
 
+#-------------------------------------------------------------------------------
+# I: The number of characters we want
+# P: 
+# O: /
+#-------------------------------------------------------------------------------
+function randpass() {
+    < /dev/urandom LC_CTYPE=C tr -dc _A-Z-a-z-0-9 | head -c${1:-32};echo;
+}
+
 # Using dig (which is available on OS X too, by default) is the fastest way to
 # get our public IP address. We could have defined the code inside an alias
 # instead, but this is causing a problem with nested quotes which are simply
@@ -288,7 +268,7 @@ function myip() {
     if type dig >/dev/null 2>&1; then
        dig +short myip.opendns.com @resolver1.opendns.com
     else
-      echo "[${RED}-${OFF}] dig was not found! This command is usually found in the 'dnsutils' package of common GNU/Linux distributions."
+      error "[${RED}-${OFF}] dig was not found! This command is usually found in the 'dnsutils' package of common GNU/Linux distributions."
     fi
 }
 
@@ -296,8 +276,12 @@ function myip() {
 # commands. Taken from: http://www.smallmeans.com/notes/shell-history/
 function chart() {
 
-    checkDep "history awk sort uniq head"
-    if [ $? -gt 0 ]; then return 1; fi
+    __wget_bashrc_requireCoreLib || return 1
+
+    if ! checkDeps "history awk sort uniq head"; then
+        error "The following commands are not installed: ${retval[@]}. Aborted."
+        return
+    fi
 
     # Retrieve history (bash built-in)
     history|
@@ -333,10 +317,14 @@ function chart() {
 # Allow to explain what a command does without having to read each man pages of
 # the subcommands involved. Source:
 # https://www.mankier.com/blog/explaining-shell-commands-in-the-shell.html
-explain () {
+function explain() {
 
-    checkDep "curl"
-    if [ $? -gt 0 ]; then return 1; fi
+    __wget_bashrc_requireCoreLib || return 1
+
+    if ! checkDeps "curl"; then
+        error "The following commands are not installed: ${retval[@]}. Aborted."
+        return
+    fi
 
     if [ "$#" -eq 0 ]; then
         while read  -p "Command: " cmd; do
@@ -353,6 +341,44 @@ explain () {
         echo "explain 'cmd -o | ...'   one quoted command to explain it."
     fi
 }
+
+# Check the local weather. based on a idea from 
+# https://twitter.com/agoncal/status/701362981767086082
+# and http://ipinfo.io/
+function weather() {
+
+    __wget_bashrc_requireCoreLib || return 1
+    
+    if ! checkDeps "curl"; then
+        error "${FUNCNAME[0]}: The following commands are not installed: ${retval[@]}. Aborted."
+        return
+    fi
+    curl http://wttr.in/$(curl -s ipinfo.io/city)
+}
+
+# src.: http://superuser.com/a/665181/456258
+function tarCompressWithProgress() {
+
+    __wget_bashrc_requireCoreLib || return 1
+
+    if ! checkDeps "uname tar pv awk"; then
+        error "${FUNCNAME[0]}: The following commands are not installed: ${retval[@]}. Aborted."
+        return
+    fi
+
+    if [[ $# -ne 3 ]]; then
+        echo "${FUNCNAME[0]} <folder to compress> <command used to compress"\
+        "with arguments> <destination compressed file>"
+        return
+    fi
+
+    if [[ $(uname) == "Linux" ]]; then
+        tar cf - "$1" -P | pv -s $(du -sb "$1" | awk '{print $1}') | "$2" > "$3"
+    else
+        tar cf - "$1" -P | pv -s $(($(du -sk "$1" | awk '{print $1}') * 1024)) | "$2" > "$3"
+    fi
+
+}
 #}}}
 
 #{{{ SSH-agent management
@@ -362,36 +388,45 @@ explain () {
 # forked each time the user launches a new login shell (TTY or in UI) and avoid
 # high memory increase.
 function manageSshAgent() {
+    __wget_bashrc_requireCoreLib || return 1
 
-    checkDep "ssh-agent ssh-add umask mkdir chmod"
-    if [ $? -gt 0 ]; then return 1; fi
+    requireDeps "ssh-agent ssh-add umask mkdir chmod" || return 1
+    echo "here"
 
     local destinationFolder="$HOME/.ssh"
 
-    # Ensure the destination folder really exists, is writable and executable before continuing.
+    # Ensure the destination folder really exists, is writable and executable
+    # before continuing.
     # If it does not exists, try to create it.
     if [ ! -e "$destinationFolder" ]; then
 
         # Reset default umask
         [ $UID == 0 ] && umask 0022 || umask 0002
         if ! mkdir -p "$destinationFolder" >/dev/null 2>&1; then
-            echo "[${RED}-${OFF}] Cannot create \"$destinationFolder\". Please check the permissions of the parent folder. Aborted."
-            return 21
+            error "${FUNCNAME[0]}: Cannot create \"$destinationFolder\". Please"\
+            "check the permissions of the parent folder. Aborted."
+            return 2
         fi
     fi
 
     if [ -f "$destinationFolder" ]; then
-        echo "[${RED}-${OFF}] \"$destinationFolder\" is already a file. Aborted."
-        return 22
-    fi
-    if [ ! -d "$destinationFolder" ]; then
-        echo "[${RED}-${OFF}] \"$destinationFolder\" is a special file (block device, socket, pipe,...). Aborted."
-        return 23
+        error "${FUNCNAME[0]}: \"$destinationFolder\" is already a file."\
+        "Aborted."
+        return 3
     fi
 
-    if [ ! -x "$destinationFolder" ] && ! chmod u+rwx "$destinationFolder"; then
-        echo "[${RED}-${OFF}] \"$destinationFolder\" is not executable and permissions cannot be changed. Maybe this folder belongs to another user. Aborted."
-        return 24
+    if [ ! -d "$destinationFolder" ]; then
+        error "${FUNCNAME[0]}: \"$destinationFolder\" is a special file (block"\
+        "device, socket, pipe,...). Aborted."
+        return 4
+    fi
+
+    if [ ! -x "$destinationFolder" ] &&
+         ! chmod u+rwx "$destinationFolder"; then
+        error "${FUNCNAME[0]}: \"$destinationFolder\" is not executable and"\
+        "permissions cannot be changed. Maybe this folder belongs to another"\
+        "user. Aborted."
+        return 5
     fi
 
     local agentFile="$destinationFolder/agent"
@@ -399,29 +434,33 @@ function manageSshAgent() {
         # Writing or removing a file from a folder is only authorized if that
         # folder is writable.
         if [ ! -w "$destinationFolder" ] && ! chmod u+rwx "$destinationFolder"; then
-            echo "[${RED}-${OFF}] \"$destinationFolder\" is not writable and permissions cannot be changed. Maybe this folder belongs to another user. Aborted."
-            return 25
+            error "${FUNCNAME[0]}: \"$destinationFolder\" is not writable and"\
+            "permissions cannot be changed. Maybe this folder belongs to another"\
+            "user. Aborted."
+            return 6
         fi
 
         # If the file exists, this means this is not a regular file, try to remove it.
         if [ -e "$agentFile" ]; then
             if [ -d "$agentFile" ]; then
-                echo -n "[${CYAN}?${OFF}] \"$agentFile\" is a directory, do you want to remove it? [y/N] "
+                confirm "${FUNCNAME[0]}: \"$agentFile\" is a directory, do you"\
+                "want to remove it? [y/N] "
             else
-                echo -n "[${CYAN}?${OFF}] \"$agentFile\" already exist and is not a regular file, do you want to remove it? [y/N] "
+                confirm "${FUNCNAME[0]}: \"$agentFile\" already exist and is"\
+                "not a regular file, do you want to remove it? [y/N] "
             fi
 
-            local answer=''
-            read answer
-            if [ "$answer" == 'y' ] || [ "$answer" == 'Y' ]; then
+            if $retval; then
                 if ! rm -fr "$agentFile" >/dev/null 2>&1; then
-                    echo "[${RED}-${OFF}] \""$agentFile"\" cannot be removed. Aborted."
-                    return 26
+                    error "${FUNCNAME[0]}: \"$agentFile\" cannot be removed."\
+                    "Aborted."
+                    return 7
                 fi
-                echo "[${GREEN}+${OFF}] \""$agentFile"\" removed."
+                success "${FUNCNAME[0]}: \"$agentFile\" removed."
             else
-                echo "[${RED}-${OFF}] \""$agentFile"\" will not be removed. Aborted."
-                return 27
+                error "${FUNCNAME[0]}: \"$agentFile\" will not be removed."\
+                "Aborted."
+                return 8
             fi
         fi
 
@@ -431,43 +470,47 @@ function manageSshAgent() {
     fi
     
     if [ ! -r "$agentFile" ] && chmod u+r "$agentFile"; then
-        echo "[${RED}-${OFF}] \"$agentFile\" cannot be made readable: your ssh-agent will not be usable in other sessions. Aborted."
-        return 28
+        error "${FUNCNAME[0]}: \"$agentFile\" cannot be made readable: your"\
+        "ssh-agent will not be usable in other sessions. Aborted."
+        return 9
     fi
 
     # Try to recover the previously ssh-agent socket. If it is valid, we assume
     # ssh-agent is already loaded and we don't need to load it again.
     if source "$agentFile" >/dev/null 2>&1 && [ -S "$SSH_AUTH_SOCK" ]; then
-        return 29
+        return 10
     fi
 
     # If we have no keys stored, do not launch ssh-agent.
-    local keysLocationFile="$destinationFolder/keys_location"
-    local keysLocation=''
-    if [ -r "$keysLocationFile" ]; then
+    local keysLocationFile="$destinationFolder/keys"
+    local keysLocation=()
+    if [ -r "$keysLocationFile" ] && [ -f "$keysLocationFile" ]; then
         keysLocation=$(<"$keysLocationFile")
     fi
+
     if [ ! -r "$destinationFolder/id_rsa" ] &&
        [ ! -r "$destinationFolder/id_dsa" ] &&
        [ ! -r "$destinationFolder/id_ecdsa" ] &&
        [ ! -r "$destinationFolder/identity" ] && 
        [ -z "$keysLocation" ]; then
-        return 30
+        warning "${FUNCNAME[0]}: No ssh keys to read. Not using ssh-agent."
+        return 11
     fi
 
     if [ ! -w "$agentFile" ] && chmod u+w "$agentFile"; then
-        echo "[${RED}-${OFF}] \"$agentFile\" cannot be made writable: unable to launch ssh-agent. Aborted."
-        return
+        error "${FUNCNAME[0]}: \"$agentFile\" cannot be made writable: unable"\
+        "to launch ssh-agent. Aborted."
+        return 12
     fi
     
     if ! ssh-agent > "$agentFile" >/dev/null 2>&1; then
-        echo "[${RED}-${OFF}] Unable to launch ssh-agent. Aborted."
-        return 31
+        error "${FUNCNAME[0]}: Unable to launch ssh-agent. Aborted."
+        return 13
     fi
 
     source "$agentFile" >/dev/null 2>&1
 
-    echo "[${GREEN}+${OFF}] Using ssh-agent \(PID $SSH_AGENT_PID\)"
+    success "${FUNCNAME[0]}: Using ssh-agent \(PID $SSH_AGENT_PID\)"
 
     # Load keys from the default location if any
     ssh-add
@@ -479,7 +522,9 @@ function manageSshAgent() {
         keysLocation=($keysLocation)
         for ((i = O; i < ${#keysLocation[@]}; i++)); do
             if [ ! -r "${keysLocation[i]}" ]; then
-                echo "[${RED}-${OFF}] The SSH-key \"${keysLocation[i]}\" specified at line $(($i + 1)) in \"$keysLocationFile\" is not readable."
+                warning "${FUNCNAME[0]}: The SSH-key \"${keysLocation[i]}\""\
+                "specified at line $(($i + 1)) in \"$keysLocationFile\" is not"\
+                "readable."
                 continue
             fi
 
@@ -489,7 +534,9 @@ function manageSshAgent() {
                   "${keysLocation[i]}" == */./* ||\
                   "${keysLocation[i]}" == ..* ||\
                   "${keysLocation[i]}" == .* ]]; then
-                echo "[${ORANGE}-${OFF}] The SSH-key \"${keysLocation[i]}\" specified at line $(($i + 1)) is not an absolute path. Skipped."
+                warning "${FUNCNAME[0]}: The SSH-key \"${keysLocation[i]}\""\
+                "specified at line $(($i + 1)) is not an absolute path."\
+                "Skipped."
                 continue
             fi
             ssh-add "$keysLocation"
@@ -497,7 +544,6 @@ function manageSshAgent() {
     fi
 }
 manageSshAgent
-unset -f manageSshAgent
 
 #}}}
 
@@ -509,17 +555,23 @@ unset -f manageSshAgent
 # is /home when booting the machine). This is not what we want. Thus we need to
 # call our global command we created.
 getScriptDirectory
-if [ -r "${scriptDirectory}/bash_specific.bashrc" ]; then
-    . ${scriptDirectory}/bash_specific.bashrc
+# We need a temporary variable as retval can be mofified by our own functions.
+# And it is actually modified by functions used by undeclareFunctions.
+currentScriptDirectory="$retval"
+if [ -r "$currentScriptDirectory/bash_specific.bashrc" ]; then
+    . $currentScriptDirectory/bash_specific.bashrc
 fi
 #}}}
 
-#{{{ Undeclaration of generic functions local to this file
+#{{{ Undeclaration of generic functions used by the library
 #-------------------------------------------------------------------------------
-unset -f getScriptDirectory
-
-# Even if this global variable was created inside getScriptDirectory which is
-# a own function, removing that function does not remove that global variable.
-unset -v scriptDirectory
-
+# If we remove declarations of functions used by the library, commands and
+# aliases defined in this file relying upon these functions will stop working
+# properly; be careful.
+# Even if we remove global functions, global variables created inside global
+# functions are not removed. We need to remove them manually.
+# undeclareFunctions $currentScriptDirectory/utils.sh $currentScriptDirectory/bash.bashrc_undeclare
+# . $currentScriptDirectory/bash.bashrc_undeclare
+unset retval
+unset currentScriptDirectory
 #}}}

@@ -1,0 +1,3 @@
+[submodule "shut"]
+	path = shut
+	url = git@github.com:wget/shut.git
