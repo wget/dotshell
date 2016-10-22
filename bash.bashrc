@@ -29,19 +29,66 @@ if shopt -oq posix; then
     return
 fi
 
+#}}}
+
+#{{{ Load libraries
 #-------------------------------------------------------------------------------
-# I: /
+#-------------------------------------------------------------------------------
+# I: - A string to prepend to our error message
 # P: Simply load our lib. The strange name is to avoid clashes.
 # O: /
 #-------------------------------------------------------------------------------
-function __wget_bashrc_requireCoreLib() {
-    if . "${PWD}/utils.sh"; then
+function __BashrcRequireCoreLib() {
+
+    if ! type readlink >/dev/null 2>&1; then
+        if [[ -z "$1" ]]; then
+            echo "${FUNCNAME[1]}: Unable to locate the required"\
+                 "core library: readlink not found. Aborted."
+        else
+            echo "$1: ${FUNCNAME[1]}: Unable to locate the required"\
+                 "core library: readlink not found. Aborted."
+        fi
+    fi
+
+    # Get script directory (symlinks supported)
+    local source="${BASH_SOURCE[0]}"
+    local dir=''
+    # Resolve $source until the file is no longer a symlink
+    while [ -h "$source" ]; do
+        dir="$(cd -P "${source%/*}" && echo "${PWD}")"
+        source="$(readlink "$source")"
+        # If $source was a relative symlink, we need to resolve it relative to
+        # the path where the symlink file was located
+        [[ $source != /* ]] && source="$dir/$source"
+    done
+    dir="$(cd -P "${source%/*}" && echo "${PWD}")"
+
+    if . "$dir/utils.sh" >/dev/null 2>&1; then
         initColors
         initEffects
         return 0
     fi
-    echo "${FUNCNAME[1]}: Unable to load the required core library. Aborted."
+    if [[ -z "$1" ]]; then
+        echo "${FUNCNAME[1]}: Unable to load the required core library. Aborted."
+    else
+        echo "$1: ${FUNCNAME[1]}: Unable to load the required core library. Aborted."
+    fi
     return 1
+}
+
+#-------------------------------------------------------------------------------
+# I: /
+# P: Free declarations of functions and global variables loaded by our lib
+# O: /
+#-------------------------------------------------------------------------------
+function __BashrcFreeCoreLib() {
+
+    getScriptDirectory
+    undeclareFunctions $retval/utils.sh
+
+    # Even if we remove global functions, global variables created inside
+    # global functions are not removed. We need to remove them manually.
+    unset retval
 }
 
 #}}}
@@ -265,20 +312,27 @@ function randpass() {
 # not interpreted. Moreover, proceeding with aliases we werelosing syntax
 # highlighting.
 function myip() {
-    if type dig >/dev/null 2>&1; then
-       dig +short myip.opendns.com @resolver1.opendns.com
-    else
-      error "[${RED}-${OFF}] dig was not found! This command is usually found in the 'dnsutils' package of common GNU/Linux distributions."
+
+    __BashrcRequireCoreLib bashrc || return 1
+
+    if ! checkDeps dig; then
+        error "dig was not found! This command is usually found in the" \
+              "'dnsutils' package of common GNU/Linux distributions."
+        return
     fi
+
+    dig +short myip.opendns.com @resolver1.opendns.com
+
+    __BashrcFreeCoreLib
 }
 
 # Display a UNIX command line histogram (graphical view) of the 20 most used
 # commands. Taken from: http://www.smallmeans.com/notes/shell-history/
 function chart() {
 
-    __wget_bashrc_requireCoreLib || return 1
+    __BashrcRequireCoreLib bashrc || return 1
 
-    if ! checkDeps "history awk sort uniq head"; then
+    if ! checkDeps history awk sort uniq head; then
         error "The following commands are not installed: ${retval[@]}. Aborted."
         return
     fi
@@ -312,6 +366,8 @@ function chart() {
          }
          printf "%15s %5d %s %s",$2,$1,r,"\n";
      }'
+
+    __BashrcFreeCoreLib
 }
 
 # Allow to explain what a command does without having to read each man pages of
@@ -319,9 +375,9 @@ function chart() {
 # https://www.mankier.com/blog/explaining-shell-commands-in-the-shell.html
 function explain() {
 
-    __wget_bashrc_requireCoreLib || return 1
+    __BashrcRequireCoreLib bashrc || return 1
 
-    if ! checkDeps "curl"; then
+    if ! checkDeps curl; then
         error "The following commands are not installed: ${retval[@]}. Aborted."
         return
     fi
@@ -340,6 +396,8 @@ function explain() {
         echo "explain                  interactive mode."
         echo "explain 'cmd -o | ...'   one quoted command to explain it."
     fi
+
+    __BashrcFreeCoreLib
 }
 
 # Check the local weather. based on a idea from 
@@ -347,21 +405,23 @@ function explain() {
 # and http://ipinfo.io/
 function weather() {
 
-    __wget_bashrc_requireCoreLib || return 1
+    __BashrcRequireCoreLib bashrc || return 1
     
-    if ! checkDeps "curl"; then
+    if ! checkDeps curl; then
         error "${FUNCNAME[0]}: The following commands are not installed: ${retval[@]}. Aborted."
         return
     fi
     curl http://wttr.in/$(curl -s ipinfo.io/city)
+
+    __BashrcFreeCoreLib
 }
 
 # src.: http://superuser.com/a/665181/456258
 function tarCompressWithProgress() {
 
-    __wget_bashrc_requireCoreLib || return 1
+    __BashrcRequireCoreLib bashrc || return 1
 
-    if ! checkDeps "uname tar pv awk"; then
+    if ! checkDeps uname tar pv awk; then
         error "${FUNCNAME[0]}: The following commands are not installed: ${retval[@]}. Aborted."
         return
     fi
@@ -378,6 +438,7 @@ function tarCompressWithProgress() {
         tar cf - "$1" -P | pv -s $(($(du -sk "$1" | awk '{print $1}') * 1024)) | "$2" > "$3"
     fi
 
+    __BashrcFreeCoreLib
 }
 #}}}
 
@@ -388,10 +449,10 @@ function tarCompressWithProgress() {
 # forked each time the user launches a new login shell (TTY or in UI) and avoid
 # high memory increase.
 function manageSshAgent() {
-    __wget_bashrc_requireCoreLib || return 1
 
-    requireDeps "ssh-agent ssh-add umask mkdir chmod" || return 1
-    echo "here"
+    __BashrcRequireCoreLib bashrc || return 1
+
+    requireDeps ssh-agent ssh-add umask mkdir chmod || return 1
 
     local destinationFolder="$HOME/.ssh"
 
@@ -542,6 +603,8 @@ function manageSshAgent() {
             ssh-add "$keysLocation"
         done
     fi
+
+    __BashrcFreeCoreLib
 }
 manageSshAgent
 
@@ -550,28 +613,21 @@ manageSshAgent
 #{{{ Platform specific
 #-------------------------------------------------------------------------------
 # Source platform specific code from another file
-# NOTE: The location "./bash_specific.bashrc" cannot be used since this will
-# only check the current directory the user sourcing this script is in (default
-# is /home when booting the machine). This is not what we want. Thus we need to
-# call our global command we created.
-getScriptDirectory
-# We need a temporary variable as retval can be mofified by our own functions.
-# And it is actually modified by functions used by undeclareFunctions.
-currentScriptDirectory="$retval"
-if [ -r "$currentScriptDirectory/bash_specific.bashrc" ]; then
-    . $currentScriptDirectory/bash_specific.bashrc
-fi
+function __BashrcReloadBashSpecific() {
+
+    __BashrcRequireCoreLib bashrc || return 1
+
+    # NOTE: The location "./bash_specific.bashrc" cannot be used since this will
+    # only check the current directory the user sourcing this script is in (default
+    # is /home when booting the machine). This is not what we want. Thus we need to
+    # call our global command we created.
+    getScriptDirectory
+
+    if [ -r "$retval/bash_specific.bashrc" ]; then
+        . $retval/bash_specific.bashrc
+    fi
+
+    __BashrcFreeCoreLib
+}
 #}}}
 
-#{{{ Undeclaration of generic functions used by the library
-#-------------------------------------------------------------------------------
-# If we remove declarations of functions used by the library, commands and
-# aliases defined in this file relying upon these functions will stop working
-# properly; be careful.
-# Even if we remove global functions, global variables created inside global
-# functions are not removed. We need to remove them manually.
-# undeclareFunctions $currentScriptDirectory/utils.sh $currentScriptDirectory/bash.bashrc_undeclare
-# . $currentScriptDirectory/bash.bashrc_undeclare
-unset retval
-unset currentScriptDirectory
-#}}}
