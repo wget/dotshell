@@ -78,13 +78,30 @@ function __BashrcRequireCoreLib() {
 
 #-------------------------------------------------------------------------------
 # I: /
-# P: Free declarations of functions and global variables loaded by our lib
+# P: Free the declarations of functions and the global variable retval loaded
+#    by our lib
 # O: /
 #-------------------------------------------------------------------------------
 function __BashrcFreeCoreLib() {
 
     getScriptDirectory
-    undeclareFunctions $retval/utils.sh
+
+    # When executing this command against our lib, we have to avoid to saw off
+    # the branch on which we are sitting, because our lib is using the
+    # functions we want to undeclare. To avoid such a problem, we had to modify
+    # the function undeclareFunctions and specify a third argument used as
+    # a safe guard in order to recover the functions names in retval.
+    #
+    # However since we are in a script, the only way to modify our parent
+    # environment is to source a file
+    # (src.: http://mywiki.wooledge.org/BashFAQ/060)
+    # As we don't want to source a file, let's use the Bash specific here
+    # string (<<<) feature. <<< expands the string and foward it to the
+    # program's stdin.  (src.: http://unix.stackexchange.com/a/76407/146454)
+    undeclareFunctions "$retval/utils.sh" "" "retval"
+    for func in "${retval[@]}"; do
+        source /dev/stdin <<< "unset -f \"$func\""
+    done
 
     # Even if we remove global functions, global variables created inside
     # global functions are not removed. We need to remove them manually.
@@ -318,6 +335,7 @@ function myip() {
     if ! checkDeps dig; then
         error "dig was not found! This command is usually found in the" \
               "'dnsutils' package of common GNU/Linux distributions."
+        __BashrcFreeCoreLib
         return
     fi
 
@@ -334,6 +352,7 @@ function chart() {
 
     if ! checkDeps history awk sort uniq head; then
         error "The following commands are not installed: ${retval[@]}. Aborted."
+        __BashrcFreeCoreLib
         return
     fi
 
@@ -379,6 +398,7 @@ function explain() {
 
     if ! checkDeps curl; then
         error "The following commands are not installed: ${retval[@]}. Aborted."
+        __BashrcFreeCoreLib
         return
     fi
 
@@ -409,6 +429,7 @@ function weather() {
     
     if ! checkDeps curl; then
         error "${FUNCNAME[0]}: The following commands are not installed: ${retval[@]}. Aborted."
+        __BashrcFreeCoreLib
         return
     fi
     curl http://wttr.in/$(curl -s ipinfo.io/city)
@@ -423,12 +444,14 @@ function tarCompressWithProgress() {
 
     if ! checkDeps uname tar pv awk; then
         error "${FUNCNAME[0]}: The following commands are not installed: ${retval[@]}. Aborted."
+        __BashrcFreeCoreLib
         return
     fi
 
     if [[ $# -ne 3 ]]; then
         echo "${FUNCNAME[0]} <folder to compress> <command used to compress"\
         "with arguments> <destination compressed file>"
+        __BashrcFreeCoreLib
         return
     fi
 
@@ -452,7 +475,10 @@ function manageSshAgent() {
 
     __BashrcRequireCoreLib bashrc || return 1
 
-    requireDeps ssh-agent ssh-add umask mkdir chmod || return 1
+    if ! requireDeps ssh-agent ssh-add umask mkdir chmod; then
+        __BashrcFreeCoreLib
+        return 1
+    fi
 
     local destinationFolder="$HOME/.ssh"
 
@@ -466,6 +492,7 @@ function manageSshAgent() {
         if ! mkdir -p "$destinationFolder" >/dev/null 2>&1; then
             error "${FUNCNAME[0]}: Cannot create \"$destinationFolder\". Please"\
             "check the permissions of the parent folder. Aborted."
+            __BashrcFreeCoreLib
             return 2
         fi
     fi
@@ -473,12 +500,14 @@ function manageSshAgent() {
     if [ -f "$destinationFolder" ]; then
         error "${FUNCNAME[0]}: \"$destinationFolder\" is already a file."\
         "Aborted."
+        __BashrcFreeCoreLib
         return 3
     fi
 
     if [ ! -d "$destinationFolder" ]; then
         error "${FUNCNAME[0]}: \"$destinationFolder\" is a special file (block"\
         "device, socket, pipe,...). Aborted."
+        __BashrcFreeCoreLib
         return 4
     fi
 
@@ -487,6 +516,7 @@ function manageSshAgent() {
         error "${FUNCNAME[0]}: \"$destinationFolder\" is not executable and"\
         "permissions cannot be changed. Maybe this folder belongs to another"\
         "user. Aborted."
+        __BashrcFreeCoreLib
         return 5
     fi
 
@@ -498,6 +528,7 @@ function manageSshAgent() {
             error "${FUNCNAME[0]}: \"$destinationFolder\" is not writable and"\
             "permissions cannot be changed. Maybe this folder belongs to another"\
             "user. Aborted."
+            __BashrcFreeCoreLib
             return 6
         fi
 
@@ -515,12 +546,14 @@ function manageSshAgent() {
                 if ! rm -fr "$agentFile" >/dev/null 2>&1; then
                     error "${FUNCNAME[0]}: \"$agentFile\" cannot be removed."\
                     "Aborted."
+                    __BashrcFreeCoreLib
                     return 7
                 fi
                 success "${FUNCNAME[0]}: \"$agentFile\" removed."
             else
                 error "${FUNCNAME[0]}: \"$agentFile\" will not be removed."\
                 "Aborted."
+                __BashrcFreeCoreLib
                 return 8
             fi
         fi
@@ -533,12 +566,14 @@ function manageSshAgent() {
     if [ ! -r "$agentFile" ] && chmod u+r "$agentFile"; then
         error "${FUNCNAME[0]}: \"$agentFile\" cannot be made readable: your"\
         "ssh-agent will not be usable in other sessions. Aborted."
+        __BashrcFreeCoreLib
         return 9
     fi
 
     # Try to recover the previously ssh-agent socket. If it is valid, we assume
     # ssh-agent is already loaded and we don't need to load it again.
     if source "$agentFile" >/dev/null 2>&1 && [ -S "$SSH_AUTH_SOCK" ]; then
+        __BashrcFreeCoreLib
         return 10
     fi
 
@@ -555,17 +590,20 @@ function manageSshAgent() {
        [ ! -r "$destinationFolder/identity" ] && 
        [ -z "$keysLocation" ]; then
         warning "${FUNCNAME[0]}: No ssh keys to read. Not using ssh-agent."
+        __BashrcFreeCoreLib
         return 11
     fi
 
     if [ ! -w "$agentFile" ] && chmod u+w "$agentFile"; then
         error "${FUNCNAME[0]}: \"$agentFile\" cannot be made writable: unable"\
         "to launch ssh-agent. Aborted."
+        __BashrcFreeCoreLib
         return 12
     fi
     
     if ! ssh-agent > "$agentFile" >/dev/null 2>&1; then
         error "${FUNCNAME[0]}: Unable to launch ssh-agent. Aborted."
+        __BashrcFreeCoreLib
         return 13
     fi
 
